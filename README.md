@@ -14,6 +14,7 @@ It acts as a local server, listening for incoming connections from your iOS apps
 - **Deep Inspection:** View JSON bodies, HTTP headers, and status codes with syntax highlighting.
 - **Multi-Session:** Handles connections from multiple devices/simulators simultaneously.
 - **Search & Filter:** Quickly find specific endpoints or failed requests.
+- **Mock Responses:** Create custom mock rules to intercept and override API responses on connected devices.
 
 ## Installation & Running
 

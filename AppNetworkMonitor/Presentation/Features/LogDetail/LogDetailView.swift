@@ -9,7 +9,9 @@ import SwiftUI
 
 struct LogDetailView: View {
     let log: LogModel
+    let onMock: (MockRule) -> Void
     @State private var selectedTab: DetailTab = .summary
+    @State private var showMockEditor = false
     
     enum DetailTab: String, CaseIterable {
         case summary = "Summary"
@@ -43,6 +45,28 @@ struct LogDetailView: View {
             }
             .background(Color(NSColor.textBackgroundColor))
         }
+        .sheet(isPresented: $showMockEditor) {
+            MockRuleEditorView(
+                rule: createMockRuleFromLog(),
+                onSave: { rule in
+                    onMock(rule)
+                    showMockEditor = false
+                },
+                onCancel: { showMockEditor = false }
+            )
+        }
+    }
+    
+    private func createMockRuleFromLog() -> MockRule {
+        MockRule(
+            path: log.path + (log.query.map { "?\($0)" } ?? ""),
+            method: log.method,
+            statusCode: log.statusCode > 0 ? log.statusCode : 200,
+            responseHeaders: log.responseHeaders,
+            responseBody: log.responseBody,
+            delayMs: 0,
+            isEnabled: true
+        )
     }
     
     // MARK: - Subviews
@@ -61,9 +85,18 @@ struct LogDetailView: View {
                     .font(.system(.body, design: .monospaced))
                     .fontWeight(.medium)
                 
+                Button {
+                    showMockEditor = true
+                } label: {
+                    Text("Mock")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                
                 Spacer()
                 
-                // Status Badge
                 HStack(spacing: 4) {
                     Circle()
                         .fill(log.isError ? Color.red : Color.green)
