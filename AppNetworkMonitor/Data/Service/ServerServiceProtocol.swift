@@ -72,6 +72,8 @@ class ServerServiceProtocol: ObservableObject {
         connections.forEach { $0.cancel() }
         connections.removeAll()
         isRunning = false
+        hasConnectedClients = false
+        connectedClientsCount = 0
     }
     
     private func setupConnection(_ connection: NWConnection) {

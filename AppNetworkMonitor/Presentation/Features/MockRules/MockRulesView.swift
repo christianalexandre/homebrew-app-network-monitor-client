@@ -397,12 +397,13 @@ struct MockRuleEditorView: View {
     }
     
     private func saveRule() {
+        let headers = rule?.responseHeaders ?? ["Content-Type": "application/json"]
         let newRule = MockRule(
             id: rule?.id ?? UUID(),
             path: path,
             method: method.isEmpty ? nil : method,
             statusCode: Int(statusCode) ?? 200,
-            responseHeaders: ["Content-Type": "application/json"],
+            responseHeaders: headers,
             responseBody: normalizedResponseBody.isEmpty ? nil : normalizedResponseBody,
             delayMs: Int(delayMs) ?? 0,
             isEnabled: isEnabled
