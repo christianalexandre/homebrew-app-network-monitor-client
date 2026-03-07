@@ -113,7 +113,7 @@ class DashboardViewModel: ObservableObject {
                 if self.isMockingEnabled,
                    previousCount == 0,
                    newCount > 0 {
-                    self.syncMockRules(self.mockRules.filter { $0.isEnabled })
+                    self.serverService.syncMockRules(self.mockRules.filter { $0.isEnabled })
                 }
             }
             .store(in: &cancellables)
