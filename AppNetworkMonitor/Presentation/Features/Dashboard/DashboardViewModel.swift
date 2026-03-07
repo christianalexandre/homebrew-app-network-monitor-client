@@ -104,7 +104,19 @@ class DashboardViewModel: ObservableObject {
         
         serverService.$connectedClientsCount
             .receive(on: RunLoop.main)
-            .assign(to: &$connectedClientsCount)
+            .sink { [weak self] newCount in
+                guard let self = self else { return }
+                
+                let previousCount = self.connectedClientsCount
+                self.connectedClientsCount = newCount
+                
+                if self.isMockingEnabled,
+                   previousCount == 0,
+                   newCount > 0 {
+                    self.syncMockRules(self.mockRules.filter { $0.isEnabled })
+                }
+            }
+            .store(in: &cancellables)
     }
     
     private func handleLogSafe(_ log: LogModel) {

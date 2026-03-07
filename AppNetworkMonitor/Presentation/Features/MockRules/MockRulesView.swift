@@ -379,7 +379,7 @@ struct MockRuleEditorView: View {
                     saveRule()
                 }
                 .keyboardShortcut(.defaultAction)
-                .disabled(path.isEmpty || !isJsonValid)
+                .disabled(path.isEmpty)
             }
         }
         .padding()

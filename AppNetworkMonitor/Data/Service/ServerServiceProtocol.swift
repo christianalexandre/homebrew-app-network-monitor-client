@@ -12,7 +12,6 @@ import Combine
 class ServerServiceProtocol: ObservableObject {
     let logReceived = PassthroughSubject<LogModel, Never>()
     @Published var isRunning = false
-    @Published var hasConnectedClients = false
     @Published var connectedClientsCount = 0
     
     private var listener: NWListener?
@@ -69,17 +68,18 @@ class ServerServiceProtocol: ObservableObject {
     
     func stop() {
         listener?.cancel()
-        connections.forEach { $0.cancel() }
+
+        let toCancel = connections
         connections.removeAll()
+        toCancel.forEach { $0.cancel() }
+        
         isRunning = false
-        hasConnectedClients = false
         connectedClientsCount = 0
     }
     
     private func setupConnection(_ connection: NWConnection) {
         connections.append(connection)
         DispatchQueue.main.async {
-            self.hasConnectedClients = true
             self.connectedClientsCount = self.connections.count
         }
         
@@ -95,7 +95,6 @@ class ServerServiceProtocol: ObservableObject {
     private func cleanup(_ connection: NWConnection) {
         connections.removeAll(where: { $0 === connection })
         DispatchQueue.main.async {
-            self.hasConnectedClients = !self.connections.isEmpty
             self.connectedClientsCount = self.connections.count
         }
     }
