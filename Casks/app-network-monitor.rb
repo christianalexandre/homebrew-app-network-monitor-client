@@ -8,8 +8,8 @@
 #   brew upgrade --cask app-network-monitor
 
 cask "app-network-monitor" do
-  version "3.0.0"
-  sha256 "aff626f061025103a661a0992f776a342b2ee9bacbae0a7430293ad13f3ce59d"
+  version "4.0.0"
+  sha256 "4ef29fcf694908a3dc38f08e07381221b8934726893515211b1b4eb1aec75e51"
 
   url "https://github.com/christianalexandre/homebrew-app-network-monitor-client/releases/download/#{version}/AppNetworkMonitor-#{version}.zip"
   name "AppNetworkMonitor"
