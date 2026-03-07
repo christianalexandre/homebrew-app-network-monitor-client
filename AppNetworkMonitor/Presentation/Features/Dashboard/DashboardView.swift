@@ -10,6 +10,7 @@ import SwiftUI
 struct DashboardView: View {
     @StateObject private var viewModel = DashboardViewModel()
     @State private var showFilterSheet = false
+    @State private var showMockRulesPopover = false
     
     var body: some View {
         NavigationSplitView {
@@ -17,7 +18,7 @@ struct DashboardView: View {
         } detail: {
             if let selectedId = viewModel.selectedLogId,
                let log = viewModel.allLogs.first(where: { $0.id == selectedId }) {
-                LogDetailView(log: log)
+                LogDetailView(log: log, onMock: { viewModel.addMockRule($0) })
             } else {
                 Text("Select a request to inspect")
                     .foregroundColor(.secondary)
@@ -26,6 +27,36 @@ struct DashboardView: View {
         .searchable(text: $viewModel.searchText, placement: .sidebar, prompt: "Search...")
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(viewModel.isMockingEnabled ? Color.orange : Color.gray)
+                        .frame(width: 8, height: 8)
+                    Text(viewModel.isMockingEnabled ? "Mocking" : "Not mocking")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(10)
+                
+                Button(action: { viewModel.toggleMocking() }) {
+                    Image(systemName: viewModel.isMockingEnabled ? "stop.circle.fill" : "play.circle.fill")
+                        .foregroundColor(viewModel.isMockingEnabled ? .orange : .gray)
+                }
+                .help(viewModel.isMockingEnabled ? "Stop mocking" : "Start mocking")
+                
+                Button(action: { showMockRulesPopover.toggle() }) {
+                    Image(systemName: "arrow.triangle.swap")
+                }
+                .help("Manage mock rules")
+                .popover(isPresented: $showMockRulesPopover, arrowEdge: .bottom) {
+                    MockRulesView(
+                        viewModel: viewModel,
+                        onDismiss: { showMockRulesPopover = false }
+                    )
+                    .frame(width: 450, height: 500)
+                }
+                
+                Divider()
+                
                 HStack(spacing: 6) {
                     Circle()
                         .fill(viewModel.isServerRunning ? Color.green : Color.red)
@@ -46,6 +77,22 @@ struct DashboardView: View {
                 Button(action: viewModel.clearLogs) {
                     Image(systemName: "trash")
                 }
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if viewModel.connectedClientsCount > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "iphone.radiowaves.left.and.right")
+                        .font(.caption2)
+                    Text("\(viewModel.connectedClientsCount) device\(viewModel.connectedClientsCount > 1 ? "s" : "") connected")
+                        .font(.caption2)
+                }
+                .foregroundColor(.secondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.9))
+                .cornerRadius(6)
+                .padding(12)
             }
         }
         .sheet(isPresented: $showFilterSheet) {

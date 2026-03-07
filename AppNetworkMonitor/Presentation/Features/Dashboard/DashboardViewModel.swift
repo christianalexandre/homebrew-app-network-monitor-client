@@ -15,10 +15,18 @@ class DashboardViewModel: ObservableObject {
     @Published var searchText: String = ""
     @Published var selectedLogId: UUID?
     @Published var isServerRunning: Bool = false
+    @Published var connectedClientsCount: Int = 0
     @Published var disabledHosts: Set<String> = []
     @Published var disabledStatusCategories: Set<StatusCodeCategory> = []
     
-    private var serverService: ServerServiceProtocol
+    @Published var mockRules: [MockRule] = [] {
+        didSet { saveMockRules() }
+    }
+    @Published var isMockingEnabled: Bool = false
+    
+    private let mockRulesKey = "AppNetworkMonitor.MockRules"
+    
+    let serverService: ServerServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     
     var availableHosts: [String] {
@@ -62,8 +70,24 @@ class DashboardViewModel: ObservableObject {
     
     init() {
         self.serverService = ServerServiceProtocol()
+        loadMockRules()
         setupBindings()
         self.toggleServer()
+    }
+    
+    // MARK: - Mock Rules Persistence
+    
+    private func loadMockRules() {
+        guard let data = UserDefaults.standard.data(forKey: mockRulesKey),
+              let rules = try? JSONDecoder().decode([MockRule].self, from: data) else {
+            return
+        }
+        mockRules = rules
+    }
+    
+    private func saveMockRules() {
+        guard let data = try? JSONEncoder().encode(mockRules) else { return }
+        UserDefaults.standard.set(data, forKey: mockRulesKey)
     }
     
     private func setupBindings() {
@@ -77,6 +101,10 @@ class DashboardViewModel: ObservableObject {
         serverService.$isRunning
             .receive(on: RunLoop.main)
             .assign(to: &$isServerRunning)
+        
+        serverService.$connectedClientsCount
+            .receive(on: RunLoop.main)
+            .assign(to: &$connectedClientsCount)
     }
     
     private func handleLogSafe(_ log: LogModel) {
@@ -122,5 +150,75 @@ class DashboardViewModel: ObservableObject {
     
     func hideAllStatusCategories() {
         disabledStatusCategories = Set(StatusCodeCategory.allCases)
+    }
+    
+    // MARK: - Mock Rules Management
+    
+    func toggleMocking() {
+        isMockingEnabled.toggle()
+        if isMockingEnabled {
+            let enabledRules = mockRules.filter { $0.isEnabled }
+            serverService.syncMockRules(enabledRules)
+        } else {
+            serverService.clearAllMockRules()
+        }
+    }
+    
+    func addMockRule(_ rule: MockRule) {
+        mockRules.append(rule)
+        if isMockingEnabled && rule.isEnabled {
+            serverService.sendMockRule(rule)
+        }
+    }
+    
+    func updateMockRule(_ rule: MockRule) {
+        guard let index = mockRules.firstIndex(where: { $0.id == rule.id }) else { return }
+        mockRules[index] = rule
+        
+        if isMockingEnabled {
+            serverService.removeMockRule(id: rule.id)
+            if rule.isEnabled {
+                serverService.sendMockRule(rule)
+            }
+        }
+    }
+    
+    func deleteMockRule(_ rule: MockRule) {
+        mockRules.removeAll { $0.id == rule.id }
+        if isMockingEnabled {
+            serverService.removeMockRule(id: rule.id)
+        }
+    }
+    
+    func toggleMockRule(_ rule: MockRule) {
+        guard let index = mockRules.firstIndex(where: { $0.id == rule.id }) else { return }
+        
+        let updatedRule = MockRule(
+            id: rule.id,
+            path: rule.path,
+            method: rule.method,
+            statusCode: rule.statusCode,
+            responseHeaders: rule.responseHeaders,
+            responseBody: rule.responseBody,
+            delayMs: rule.delayMs,
+            isEnabled: !rule.isEnabled
+        )
+        
+        mockRules[index] = updatedRule
+        
+        if isMockingEnabled {
+            if updatedRule.isEnabled {
+                serverService.sendMockRule(updatedRule)
+            } else {
+                serverService.removeMockRule(id: updatedRule.id)
+            }
+        }
+    }
+    
+    func clearAllMockRules() {
+        mockRules.removeAll()
+        if isMockingEnabled {
+            serverService.clearAllMockRules()
+        }
     }
 }
