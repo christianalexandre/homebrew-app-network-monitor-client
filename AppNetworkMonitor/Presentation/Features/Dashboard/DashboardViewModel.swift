@@ -26,7 +26,7 @@ class DashboardViewModel: ObservableObject {
     
     private let mockRulesKey = "AppNetworkMonitor.MockRules"
     
-    let serverService: ServerServiceProtocol
+    private let serverService: ServerServiceProtocol
     private var cancellables = Set<AnyCancellable>()
     
     var availableHosts: [String] {
