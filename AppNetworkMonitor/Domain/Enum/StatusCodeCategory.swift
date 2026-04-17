@@ -1,10 +1,3 @@
-//
-//  StatusCodeCategory.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 06/02/26.
-//
-
 import SwiftUI
 
 enum StatusCodeCategory: String, CaseIterable, Identifiable {

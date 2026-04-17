@@ -1,10 +1,3 @@
-//
-//  SidebarView.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 19/12/25.
-//
-
 import SwiftUI
 
 struct SidebarView: View {

@@ -1,10 +1,3 @@
-//
-//  StatusCodeBadge.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 30/12/25.
-//
-
 import SwiftUI
 
 struct StatusCodeBadge: View {

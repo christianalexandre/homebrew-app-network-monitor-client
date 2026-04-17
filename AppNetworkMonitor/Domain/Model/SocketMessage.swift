@@ -1,10 +1,3 @@
-//
-//  SocketMessage.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 06/03/26.
-//
-
 import Foundation
 
 public struct SocketMessage: Codable {

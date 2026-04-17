@@ -1,10 +1,3 @@
-//
-//  String+Extensions.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 30/12/25.
-//
-
 import Foundation
 
 extension String {

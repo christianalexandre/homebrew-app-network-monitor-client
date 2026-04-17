@@ -1,10 +1,3 @@
-//
-//  CurlGenerator.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 30/12/25.
-//
-
 struct CurlGenerator {
     static func generate(from log: LogModel) -> String {
         var components = ["curl -v"]

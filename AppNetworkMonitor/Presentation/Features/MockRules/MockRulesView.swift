@@ -1,10 +1,3 @@
-//
-//  MockRulesView.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 06/03/26.
-//
-
 import SwiftUI
 
 struct MockRulesView: View {

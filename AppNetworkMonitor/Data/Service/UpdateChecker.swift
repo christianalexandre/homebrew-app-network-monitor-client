@@ -1,10 +1,3 @@
-//
-//  UpdateChecker.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 09/02/26.
-//
-
 import Foundation
 import AppKit
 
@@ -77,7 +70,7 @@ final class UpdateChecker: ObservableObject {
             let currentVersion = getCurrentVersion()
             let latestVersion = release.tagName.replacingOccurrences(of: "v", with: "")
             
-            let isUpdateAvailable = compareVersions(current: currentVersion, latest: latestVersion)
+            let isUpdateAvailable = Self.compareVersions(current: currentVersion, latest: latestVersion)
             
             updateInfo = UpdateInfo(
                 currentVersion: currentVersion,
@@ -120,7 +113,7 @@ final class UpdateChecker: ObservableObject {
     
     /// Open the releases page directly
     func openReleasesPage() {
-        let url = URL(string: "https://github.com/\(repoOwner)/\(repoName)/releases")!
+        guard let url = URL(string: "https://github.com/\(repoOwner)/\(repoName)/releases") else { return }
         NSWorkspace.shared.open(url)
     }
     
@@ -159,10 +152,10 @@ final class UpdateChecker: ObservableObject {
     }
     
     /// Compare semantic versions
-    /// Returns true if latest > current
-    private func compareVersions(current: String, latest: String) -> Bool {
-        let currentComponents = current.split(separator: ".").compactMap { Int($0) }
-        let latestComponents = latest.split(separator: ".").compactMap { Int($0) }
+    /// Returns true if latest > current. Strips pre-release / build suffixes (`-beta.1`, `+abc`).
+    nonisolated static func compareVersions(current: String, latest: String) -> Bool {
+        let currentComponents = Self.numericComponents(of: current)
+        let latestComponents = Self.numericComponents(of: latest)
         
         let maxLength = max(currentComponents.count, latestComponents.count)
         
@@ -178,6 +171,11 @@ final class UpdateChecker: ObservableObject {
         }
         
         return false
+    }
+
+    nonisolated static func numericComponents(of version: String) -> [Int] {
+        let core = version.split(whereSeparator: { $0 == "-" || $0 == "+" }).first.map(String.init) ?? version
+        return core.split(separator: ".").compactMap { Int($0) }
     }
 }
 

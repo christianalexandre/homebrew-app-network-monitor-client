@@ -1,10 +1,3 @@
-//
-//  DashboardView.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 19/12/25.
-//
-
 import SwiftUI
 
 struct DashboardView: View {
@@ -17,13 +10,14 @@ struct DashboardView: View {
             SidebarView(viewModel: viewModel, showFilterSheet: $showFilterSheet)
         } detail: {
             if let selectedId = viewModel.selectedLogId,
-               let log = viewModel.allLogs.first(where: { $0.id == selectedId }) {
+               let log = viewModel.log(forId: selectedId) {
                 LogDetailView(log: log, onMock: { viewModel.addMockRule($0) })
             } else {
                 Text("Select a request to inspect")
                     .foregroundColor(.secondary)
             }
         }
+        .task { viewModel.startIfNeeded() }
         .searchable(text: $viewModel.searchText, placement: .sidebar, prompt: "Search...")
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
@@ -97,15 +91,7 @@ struct DashboardView: View {
         }
         .sheet(isPresented: $showFilterSheet) {
             FilterSheetContent(
-                availableHosts: viewModel.availableHosts,
-                disabledHosts: viewModel.disabledHosts,
-                disabledStatusCategories: viewModel.disabledStatusCategories,
-                onToggleHost: viewModel.toggleHostVisibility,
-                onShowAllHosts: viewModel.showAllHosts,
-                onHideAllHosts: viewModel.hideAllHosts,
-                onToggleStatusCategory: viewModel.toggleStatusCategory,
-                onShowAllStatusCategories: viewModel.showAllStatusCategories,
-                onHideAllStatusCategories: viewModel.hideAllStatusCategories,
+                viewModel: viewModel,
                 onDismiss: { showFilterSheet = false }
             )
         }
@@ -113,128 +99,81 @@ struct DashboardView: View {
 }
 
 struct FilterSheetContent: View {
-    let availableHosts: [String]
-    let disabledHosts: Set<String>
-    let disabledStatusCategories: Set<StatusCodeCategory>
-    let onToggleHost: (String) -> Void
-    let onShowAllHosts: () -> Void
-    let onHideAllHosts: () -> Void
-    let onToggleStatusCategory: (StatusCodeCategory) -> Void
-    let onShowAllStatusCategories: () -> Void
-    let onHideAllStatusCategories: () -> Void
+    @ObservedObject var viewModel: DashboardViewModel
     let onDismiss: () -> Void
-    
-    @State private var localHosts: [String] = []
-    @State private var localDisabledHosts: Set<String> = []
-    @State private var localDisabledStatusCategories: Set<StatusCodeCategory> = []
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Header
             HStack {
                 Text("Filters").font(.title2).fontWeight(.semibold)
                 Spacer()
-                Button("Done") {
-                    onDismiss()
-                }
-                .buttonStyle(.borderedProminent)
+                Button("Done", action: onDismiss)
+                    .buttonStyle(.borderedProminent)
             }
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Status Code Section
                     statusCodeSection
-                    
                     Divider()
-                    
-                    // Host Section
                     hostSection
                 }
             }
         }
         .padding()
         .frame(width: 380, height: 500)
-        .onAppear {
-            localHosts = availableHosts
-            localDisabledHosts = disabledHosts
-            localDisabledStatusCategories = disabledStatusCategories
-        }
     }
-    
-    // MARK: - Status Code Section
-    
+
     private var statusCodeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Status Code").font(.headline)
                 Spacer()
-                
-                Button("All") {
-                    localDisabledStatusCategories.removeAll()
-                    onShowAllStatusCategories()
-                }
-                .font(.caption)
-                .buttonStyle(.link)
-                
+
+                Button("All") { viewModel.showAllStatusCategories() }
+                    .font(.caption)
+                    .buttonStyle(.link)
+
                 Text("|").foregroundColor(.secondary)
-                
-                Button("None") {
-                    localDisabledStatusCategories = Set(StatusCodeCategory.allCases)
-                    onHideAllStatusCategories()
-                }
-                .font(.caption)
-                .buttonStyle(.link)
+
+                Button("None") { viewModel.hideAllStatusCategories() }
+                    .font(.caption)
+                    .buttonStyle(.link)
             }
-            
+
             HStack(spacing: 8) {
                 ForEach(StatusCodeCategory.allCases) { category in
                     StatusCategoryToggle(
                         category: category,
-                        isEnabled: !localDisabledStatusCategories.contains(category),
-                        onToggle: {
-                            if localDisabledStatusCategories.contains(category) {
-                                localDisabledStatusCategories.remove(category)
-                            } else {
-                                localDisabledStatusCategories.insert(category)
-                            }
-                            onToggleStatusCategory(category)
-                        }
+                        isEnabled: !viewModel.disabledStatusCategories.contains(category),
+                        onToggle: { viewModel.toggleStatusCategory(category) }
                     )
                 }
             }
         }
     }
-    
-    // MARK: - Host Section
-    
+
     private var hostSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Host").font(.headline)
                 Spacer()
-                
-                if !localHosts.isEmpty {
-                    Button("All") {
-                        localDisabledHosts.removeAll()
-                        onShowAllHosts()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.link)
-                    
+
+                if !viewModel.availableHosts.isEmpty {
+                    Button("All") { viewModel.showAllHosts() }
+                        .font(.caption)
+                        .buttonStyle(.link)
+
                     Text("|").foregroundColor(.secondary)
-                    
-                    Button("None") {
-                        localDisabledHosts = Set(localHosts)
-                        onHideAllHosts()
-                    }
-                    .font(.caption)
-                    .buttonStyle(.link)
+
+                    Button("None") { viewModel.hideAllHosts() }
+                        .font(.caption)
+                        .buttonStyle(.link)
                 }
             }
-            
-            if localHosts.isEmpty {
+
+            if viewModel.availableHosts.isEmpty {
                 Text("No requests yet")
                     .foregroundColor(.secondary)
                     .italic()
@@ -242,17 +181,10 @@ struct FilterSheetContent: View {
                     .padding()
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    ForEach(localHosts, id: \.self) { host in
+                    ForEach(viewModel.availableHosts, id: \.self) { host in
                         Toggle(isOn: Binding(
-                            get: { !localDisabledHosts.contains(host) },
-                            set: { isEnabled in
-                                if isEnabled {
-                                    localDisabledHosts.remove(host)
-                                } else {
-                                    localDisabledHosts.insert(host)
-                                }
-                                onToggleHost(host)
-                            }
+                            get: { !viewModel.disabledHosts.contains(host) },
+                            set: { _ in viewModel.toggleHostVisibility(host) }
                         )) {
                             Text(host)
                                 .font(.body)

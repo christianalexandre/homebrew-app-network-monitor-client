@@ -1,10 +1,3 @@
-//
-//  UpdateMenuView.swift
-//  AppNetworkMonitor
-//
-//  Created by Christian Alexandre on 09/02/26.
-//
-
 import SwiftUI
 
 /// Menu bar item for checking updates

@@ -1,10 +1,3 @@
-//
-//  AppNetworkMonitorUITests.swift
-//  AppNetworkMonitorUITests
-//
-//  Created by Christian Alexandre on 17/12/25.
-//
-
 import XCTest
 
 final class AppNetworkMonitorUITests: XCTestCase {
