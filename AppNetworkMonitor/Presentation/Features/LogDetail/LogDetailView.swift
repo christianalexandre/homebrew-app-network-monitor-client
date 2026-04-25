@@ -52,7 +52,7 @@ struct LogDetailView: View {
     
     private func createMockRuleFromLog() -> MockRule {
         MockRule(
-            path: log.path + (log.query.map { "?\($0)" } ?? ""),
+            path: log.path,
             method: log.method,
             statusCode: log.statusCode > 0 ? log.statusCode : 200,
             responseHeaders: log.responseHeaders,

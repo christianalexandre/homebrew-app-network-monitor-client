@@ -24,13 +24,44 @@ struct UpdateAlertModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .alert("Update Available", isPresented: $updateChecker.showUpdateAlert) {
-                Button("Download") {
+                if updateChecker.updateInfo?.downloadUrl != nil {
+                    Button("Install Update") {
+                        Task {
+                            await updateChecker.downloadAndInstallUpdate()
+                        }
+                    }
+                }
+                Button("Open Release Page") {
                     updateChecker.openReleasePage()
                 }
                 Button("Later", role: .cancel) {}
             } message: {
                 if let info = updateChecker.updateInfo {
                     Text("A new version (\(info.latestVersion)) is available.\nYou are currently running version \(info.currentVersion).")
+                }
+            }
+            .alert("No Updates Available", isPresented: $updateChecker.showNoUpdateAlert) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let info = updateChecker.updateInfo {
+                    Text("You're running the latest version (\(info.currentVersion)).")
+                } else {
+                    Text("You're already up to date.")
+                }
+            }
+            .alert("Update Error", isPresented: .init(
+                get: { updateChecker.errorMessage != nil },
+                set: { if !$0 { updateChecker.errorMessage = nil } }
+            )) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let error = updateChecker.errorMessage {
+                    Text(error)
+                }
+            }
+            .overlay {
+                if updateChecker.isDownloading || updateChecker.isInstalling {
+                    UpdateProgressOverlay(updateChecker: updateChecker)
                 }
             }
     }
@@ -53,8 +84,20 @@ struct UpdateStatusView: View {
                 ProgressView()
                     .scaleEffect(0.5)
                     .frame(width: 16, height: 16)
+            } else if updateChecker.isDownloading || updateChecker.isInstalling {
+                ProgressView()
+                    .scaleEffect(0.5)
+                    .frame(width: 16, height: 16)
+                Text(updateChecker.isInstalling ? "Installing..." : "Downloading...")
+                    .font(.caption)
             } else if let info = updateChecker.updateInfo, info.isUpdateAvailable {
-                Button(action: { updateChecker.openReleasePage() }) {
+                Button(action: {
+                    if info.downloadUrl != nil {
+                        Task { await updateChecker.downloadAndInstallUpdate() }
+                    } else {
+                        updateChecker.openReleasePage()
+                    }
+                }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.down.circle.fill")
                             .foregroundColor(.blue)
@@ -63,7 +106,7 @@ struct UpdateStatusView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                .help("Version \(info.latestVersion) available")
+                .help("Version \(info.latestVersion) available — click to install")
             }
         }
     }
@@ -76,4 +119,42 @@ struct UpdateStatusView: View {
         let checker = UpdateChecker()
         return checker
     }())
+}
+
+// MARK: - Progress Overlay
+
+struct UpdateProgressOverlay: View {
+    @ObservedObject var updateChecker: UpdateChecker
+    
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 16) {
+                if updateChecker.isInstalling {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Installing update...")
+                        .font(.headline)
+                    Text("The app will restart automatically")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else {
+                    ProgressView(value: updateChecker.downloadProgress) {
+                        Text("Downloading update...")
+                            .font(.headline)
+                    }
+                    .progressViewStyle(.linear)
+                    Text("\(Int(updateChecker.downloadProgress * 100))%")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .padding(32)
+            .frame(width: 300)
+            .background(.regularMaterial)
+            .cornerRadius(12)
+        }
+    }
 }
